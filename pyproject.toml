@@ -1,0 +1,68 @@
+[project]
+name = "anybucket"
+description = "A unified interface over object storage buckets."
+authors = [{ name = "Abidán Brito", email = "abidan.brito@gmail.com" }]
+maintainers = [{ name = "Abidán Brito", email = "abidan.brito@gmail.com" }]
+dynamic = ["version"]
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Typing :: Typed",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/abidanBrito/anybucket"
+Issues = "https://github.com/abidanBrito/anybucket/issues"
+
+[project.optional-dependencies]
+s3 = ["boto3"]
+gcs = ["google-cloud-storage"]
+all = ["anybucket[s3,gcs]"]
+
+[dependency-groups]
+lint = ["ruff", "pyrefly"]
+test = ["pytest"]
+dev = [
+  { include-group = "lint" },
+  { include-group = "test" },
+  "pre-commit",
+]
+
+[build-system]
+requires = ["hatchling", "versioningit"]
+build-backend = "hatchling.build"
+
+[tool.hatch.version]
+path = "src/anybucket/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/anybucket"]
+
+[tool.ruff]
+line-length = 88
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = [
+  "E",   # pycodestyle errors
+  "F",   # pyflakes
+  "I",   # isort
+  "UP",  # pyupgrade
+  "B",   # flake8-bugbear
+  "SIM", # flake8-simplify
+]
+
+[tool.pyrefly]
+project-includes = ["src", "tests"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
