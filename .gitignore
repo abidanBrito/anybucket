@@ -1,0 +1,12 @@
+# Python
+__pycache__/
+.venv/
+
+# Build artifacts
+/dist/
+*.egg-info/
+
+# Tooling caches
+.pytest_cache/
+.ruff_cache/
+.pyrefly/
