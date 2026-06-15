@@ -3,9 +3,11 @@ name = "anybucket"
 description = "A unified interface over object storage buckets."
 authors = [{ name = "Abidán Brito", email = "abidan.brito@gmail.com" }]
 maintainers = [{ name = "Abidán Brito", email = "abidan.brito@gmail.com" }]
+keywords = ["cloud", "storage", "bucket", "s3", "gcs"]
 dynamic = ["version"]
 readme = "README.md"
 license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 classifiers = [
   "Development Status :: 3 - Alpha",
@@ -15,6 +17,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Typing :: Typed",
 ]
 dependencies = []
@@ -42,24 +45,49 @@ requires = ["hatchling", "versioningit"]
 build-backend = "hatchling.build"
 
 [tool.hatch.version]
-path = "src/anybucket/__init__.py"
+source = "versioningit"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/anybucket"]
 
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/anybucket/**/*.py",
+    "src/anybucket/py.typed",
+    "README.md"
+]
+
+[tool.versioningit]
+default-version = "0.0.1"
+
+[tool.versioningit.vcs]
+method = "git"
+match = ["v*"]
+
+[tool.versioningit.format]
+distance = "{base_version}"
+dirty = "{base_version}"
+distance-dirty = "{base_version}"
+
 [tool.ruff]
-line-length = 88
+indent-width = 4
+line-length = 100
 src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = [
+  "B",   # flake8-bugbear
+  "D",   # pydocstyle
   "E",   # pycodestyle errors
   "F",   # pyflakes
   "I",   # isort
   "UP",  # pyupgrade
-  "B",   # flake8-bugbear
   "SIM", # flake8-simplify
 ]
+ignore = ["D203", "D213", "RET503"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "pep257"
 
 [tool.pyrefly]
 project-includes = ["src", "tests"]
