@@ -20,11 +20,11 @@ fix:
     uv run ruff check --fix
 
 # Type-check cobebase
-type-check:
+type:
     uv run pyrefly check
 
 # Lint, type-check and run tests
-check: lint type-check test
+check: lint type test
 
 # Run test suite
 test:
