@@ -3,10 +3,10 @@ name = "anybucket"
 description = "A unified interface over object storage buckets."
 authors = [{ name = "Abidán Brito", email = "abidan.brito@gmail.com" }]
 maintainers = [{ name = "Abidán Brito", email = "abidan.brito@gmail.com" }]
-keywords = ["cloud", "storage", "bucket", "s3", "gcs"]
+keywords = ["cloud", "storage", "object-storage", "s3", "minio", "gcs"]
 dynamic = ["version"]
 readme = "README.md"
-license = "MIT"
+license = { text = "MIT" }
 license-files = ["LICENSE"]
 requires-python = ">=3.11"
 classifiers = [
@@ -20,7 +20,9 @@ classifiers = [
   "Programming Language :: Python :: 3.14",
   "Typing :: Typed",
 ]
-dependencies = []
+dependencies = [
+    "boto3>=1.28",
+]
 
 [project.urls]
 Homepage = "https://github.com/abidanBrito/anybucket"
@@ -28,12 +30,12 @@ Issues = "https://github.com/abidanBrito/anybucket/issues"
 
 [project.optional-dependencies]
 s3 = ["boto3"]
-gcs = ["google-cloud-storage"]
-all = ["anybucket[s3,gcs]"]
+# gcs = ["google-cloud-storage"]
+# all = ["anybucket[s3,gcs]"]
 
 [dependency-groups]
 lint = ["ruff", "pyrefly"]
-test = ["pytest"]
+test = ["pytest", "moto[s3]"]
 dev = [
   { include-group = "lint" },
   { include-group = "test" },
@@ -46,7 +48,6 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 source = "versioningit"
-
 [tool.hatch.build.targets.wheel]
 packages = ["src/anybucket"]
 
@@ -75,6 +76,7 @@ line-length = 100
 src = ["src", "tests"]
 
 [tool.ruff.lint]
+exclude = ["tests/**"]
 select = [
   "B",   # flake8-bugbear
   "D",   # pydocstyle
