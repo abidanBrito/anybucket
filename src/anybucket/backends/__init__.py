@@ -1,7 +1,9 @@
 """
 Backends package.
 
-Provides storage backend implementations.
+Provides concrete storage backend implementations.
 """
 
-__all__ = []
+from .s3 import S3Backend
+
+__all__ = ["S3Backend"]
