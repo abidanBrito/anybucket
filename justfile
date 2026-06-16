@@ -23,8 +23,12 @@ fix:
 type:
     uv run pyrefly check
 
-# Lint, type-check and run tests
-check: lint type test
+# Spell-check codebase
+spell:
+    uv run pre-commit run codespell --all-files
+
+# Lint, spell-check, type-check and run tests
+check: lint type spell test
 
 # Run test suite
 test:
