@@ -7,7 +7,7 @@ Adding a new provider is a two-line change here: register an alias in
 
 from __future__ import annotations
 
-from enum import Enum
+from enum import StrEnum
 from typing import cast
 
 from .backends import S3Backend
@@ -16,7 +16,7 @@ from .config import DEFAULT_ENV_PREFIX, S3Config
 from .exceptions import ProviderError
 
 
-class Provider(str, Enum):
+class Provider(StrEnum):
     """Known provider labels. All current values are S3-compatible."""
 
     S3 = "s3"
