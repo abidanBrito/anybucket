@@ -1,7 +1,7 @@
 """
 Tests for ``S3Config.resolve``.
 
-Cover explicit values winning over the environent ones, the environment
+Cover explicit values winning over the environment ones, the environment
 variables fallbacks, custom prefixes, and the missing-credential
 error.
 """
