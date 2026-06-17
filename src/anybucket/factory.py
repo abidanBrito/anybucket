@@ -1,23 +1,22 @@
 """
 The single entry point: ``get_client(provider, ...)``.
 
-Adding a new provider is a two-line change here: register an alias in
-``_REGISTRY`` and point it at a new builder (for a non-S3 backend).
+Most labels are S3-compatible and share :class:`S3Backend`; ``gcs`` uses the
+native :class:`GCSBackend`.
 """
 
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import cast
 
 from .backends import S3Backend
 from .base import StorageBackend
-from .config import DEFAULT_ENV_PREFIX, S3Config
+from .config import DEFAULT_ENV_PREFIX, GCSConfig, S3Config
 from .exceptions import ProviderError
 
 
 class Provider(StrEnum):
-    """Known provider labels. All current values are S3-compatible."""
+    """Known provider labels."""
 
     S3 = "s3"
     AWS = "aws"
@@ -26,11 +25,10 @@ class Provider(StrEnum):
     R2 = "r2"
     B2 = "b2"
     CEPH = "ceph"
+    GCS = "gcs"
 
 
-# Provider label -> backend class
-# NOTE(abi): several labels intentionally share the same backend (e.g. S3Backend).
-_REGISTRY: dict[str, type[StorageBackend]] = {p.value: S3Backend for p in Provider}
+_KNOWN_PROVIDERS = frozenset(p.value for p in Provider)
 
 
 def get_client(
@@ -40,26 +38,31 @@ def get_client(
     secret_key: str | None = None,
     endpoint_url: str | None = None,
     region: str | None = None,
+    project: str | None = None,
+    credentials_path: str | None = None,
     env_prefix: str = DEFAULT_ENV_PREFIX,
     transfer_config=None,
 ) -> StorageBackend:
     """
     Create a configured storage client.
 
-    Credentials are taken from the explicit arguments, falling back to
+    Settings are taken from the explicit arguments, falling back to
     ``{env_prefix}*`` environment variables for anything left as ``None``
-    (see :meth:`S3Config.resolve`).
+    (see :meth:`S3Config.resolve` / :meth:`GCSConfig.resolve`).
 
     :param provider: which backend to use. Defaults to ``"minio"``. Unknown
         values raise :class:`ProviderError`.
-    :param access_key: explicit access key; falls back to the environment.
-    :param secret_key: explicit secret key; falls back to the environment.
-    :param endpoint_url: explicit endpoint URL; falls back to the environment.
-    :param region: explicit region; falls back to the environment.
+    :param access_key: explicit access key (S3); falls back to the environment.
+    :param secret_key: explicit secret key (S3); falls back to the environment.
+    :param endpoint_url: explicit endpoint URL (S3); falls back to the environment.
+    :param region: explicit region (S3); falls back to the environment.
+    :param project: explicit GCP project (GCS); falls back to the environment.
+    :param credentials_path: service-account JSON path (GCS); falls back to the
+        environment, then to Application Default Credentials.
     :param env_prefix: prefix for the environment-variable fallback
         (default ``"STORAGE_"``).
     :param transfer_config: optional boto3 ``TransferConfig`` passed through to
-        the backend.
+        S3-compatible backends.
     :returns: a configured storage client.
     :raises ProviderError: if ``provider`` is not a known label.
 
@@ -74,10 +77,20 @@ def get_client(
     >>> client.put("ndvi.tif", "s3://rasters/2026/ndvi.tif")
     """
     key = provider.value if isinstance(provider, Provider) else str(provider).lower()
-    backend_cls = _REGISTRY.get(key)
-    if backend_cls is None:
-        known = ", ".join(sorted(_REGISTRY))
+    if key not in _KNOWN_PROVIDERS:
+        known = ", ".join(sorted(_KNOWN_PROVIDERS))
         raise ProviderError(f"Unknown provider {provider!r}. Known: {known}.")
+
+    if key == Provider.GCS.value:
+        from .backends.gcs import GCSBackend
+
+        gcs_config = GCSConfig.resolve(
+            project=project,
+            credentials_path=credentials_path,
+            env_prefix=env_prefix,
+        )
+
+        return GCSBackend(gcs_config)
 
     config = S3Config.resolve(
         access_key=access_key,
@@ -87,4 +100,4 @@ def get_client(
         env_prefix=env_prefix,
     )
 
-    return cast(type[S3Backend], backend_cls)(config, transfer_config=transfer_config)
+    return S3Backend(config, transfer_config=transfer_config)
