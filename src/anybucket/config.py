@@ -21,13 +21,13 @@ from dataclasses import dataclass
 from .exceptions import ConfigError
 
 DEFAULT_ENV_PREFIX = "STORAGE_"
-_DEFAULT_REGION = "us-east-1"
+_S3_DEFAULT_REGION = "us-east-1"
 
 
 @dataclass(frozen=True)
 class S3Config:
     """
-    Everything needed to open a connection to an S3-compatible provider.
+    Settings to open a connection to an S3-compatible provider.
 
     :ivar access_key: access-key credential (``AWS_ACCESS_KEY_ID`` equivalent).
     :ivar secret_key: secret-key credential (``AWS_SECRET_ACCESS_KEY`` equivalent).
@@ -39,7 +39,7 @@ class S3Config:
     access_key: str
     secret_key: str
     endpoint_url: str | None = None
-    region: str = _DEFAULT_REGION
+    region: str = _S3_DEFAULT_REGION
 
     @classmethod
     def resolve(
@@ -67,7 +67,7 @@ class S3Config:
         access_key = access_key or os.environ.get(f"{env_prefix}ACCESS_KEY")
         secret_key = secret_key or os.environ.get(f"{env_prefix}SECRET_KEY")
         endpoint_url = endpoint_url or os.environ.get(f"{env_prefix}ENDPOINT_URL")
-        region = region or os.environ.get(f"{env_prefix}REGION") or _DEFAULT_REGION
+        region = region or os.environ.get(f"{env_prefix}REGION") or _S3_DEFAULT_REGION
 
         missing = [
             name
@@ -91,3 +91,47 @@ class S3Config:
             endpoint_url=endpoint_url,
             region=region,
         )
+
+
+@dataclass(frozen=True)
+class GCSConfig:
+    """
+    Settings to open a connection to Google Cloud Storage.
+
+    Native GCS authenticates via Application Default Credentials, so every
+    field is optional. Leave them ``None`` to let the SDK discover the project
+    and credentials from the environment (``GOOGLE_APPLICATION_CREDENTIALS`` /
+    ``gcloud`` login).
+
+    :ivar project: GCP project id, or ``None`` to let the SDK infer it.
+    :ivar credentials_path: path to a service-account JSON key file, or ``None``
+        to use Application Default Credentials.
+    """
+
+    project: str | None = None
+    credentials_path: str | None = None
+
+    @classmethod
+    def resolve(
+        cls,
+        *,
+        project: str | None = None,
+        credentials_path: str | None = None,
+        env_prefix: str = DEFAULT_ENV_PREFIX,
+    ) -> GCSConfig:
+        """
+        Build a config from explicit values, falling back to the environment.
+
+        Any argument left ``None`` is read from ``{env_prefix}<NAME>``
+        (``PROJECT`` / ``CREDENTIALS``).
+
+        :param project: GCP project id, or ``None`` to read from the env.
+        :param credentials_path: service-account JSON path, or ``None`` to read
+            from the env.
+        :param env_prefix: prefix for the environment-variable fallback.
+        :returns: a frozen config instance.
+        """
+        project = project or os.environ.get(f"{env_prefix}PROJECT")
+        credentials_path = credentials_path or os.environ.get(f"{env_prefix}CREDENTIALS")
+
+        return cls(project=project, credentials_path=credentials_path)
