@@ -12,7 +12,6 @@ Transfers use boto3's Transfer Manager, which streams the file in fixed-size par
 from __future__ import annotations
 
 import logging
-import mimetypes
 from pathlib import Path
 
 import boto3
@@ -21,22 +20,13 @@ from botocore.exceptions import BotoCoreError, ClientError
 
 from ..base import StorageBackend
 from ..config import S3Config
+from ..mime import infer_content_type
 from ..results import DownloadResult, UploadResult
 
 logger = logging.getLogger(__name__)
 
 # 8 MB to keep per-part memory low
 _PART_SIZE = 8 * 1024 * 1024
-
-# Geospatial/scientic data content types mimetypes doesn't know about
-_EXTRA_CONTENT_TYPES = {
-    ".tif": "image/tiff",
-    ".tiff": "image/tiff",
-    ".jp2": "image/jp2",
-    ".hdf": "application/x-hdf",
-    ".h5": "application/x-hdf5",
-    ".nc": "application/x-netcdf",
-}
 
 
 def default_transfer_config() -> TransferConfig:
@@ -106,7 +96,7 @@ class S3Backend(StorageBackend):
                 message=f"Not a file: {local_path}",
             )
 
-        extra_args: dict = {"ContentType": _infer_content_type(local_path)}
+        extra_args: dict = {"ContentType": infer_content_type(local_path)}
         if metadata:
             extra_args["Metadata"] = metadata
 
@@ -201,14 +191,6 @@ class S3Backend(StorageBackend):
 def _status_code(exc: ClientError) -> int:
     """Return the HTTP status code from a botocore error, or 0 if unavailable."""
     return exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode", 0)
-
-
-def _infer_content_type(path: Path) -> str:
-    mime, _ = mimetypes.guess_type(path.name)
-    if mime:
-        return mime
-
-    return _EXTRA_CONTENT_TYPES.get(path.suffix.lower(), "application/octet-stream")
 
 
 class _ProgressLogger:
