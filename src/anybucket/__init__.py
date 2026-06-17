@@ -10,7 +10,7 @@ from importlib.metadata import PackageNotFoundError, version
 
 from .backends import S3Backend
 from .base import StorageBackend
-from .config import S3Config
+from .config import GCSConfig, S3Config
 from .exceptions import (
     ConfigError,
     ObjectNotFound,
@@ -20,6 +20,11 @@ from .exceptions import (
 from .factory import Provider, get_client
 from .results import DownloadResult, UploadResult
 from .uri import parse_uri
+
+try:
+    from .backends.gcs import GCSBackend
+except ImportError:
+    GCSBackend = None
 
 try:
     __version__ = version("anybucket")
@@ -34,7 +39,9 @@ __all__ = [
     "Provider",
     "StorageBackend",
     "S3Backend",
+    "GCSBackend",
     "S3Config",
+    "GCSConfig",
     "UploadResult",
     "DownloadResult",
     "parse_uri",
@@ -42,5 +49,4 @@ __all__ = [
     "ConfigError",
     "ProviderError",
     "ObjectNotFound",
-    "__version__",
 ]
