@@ -49,5 +49,4 @@ __all__ = [
     "ConfigError",
     "ProviderError",
     "ObjectNotFound",
-    "__version__",
 ]
