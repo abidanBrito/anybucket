@@ -66,9 +66,9 @@ method = "git"
 match = ["v*"]
 
 [tool.versioningit.format]
-distance = "{base_version}"
-dirty = "{base_version}"
-distance-dirty = "{base_version}"
+distance = "{base_version}.dev{distance}+{rev}"
+dirty = "{base_version}.dev0+d{build_date:%Y%m%d}"
+distance-dirty = "{base_version}.dev{distance}+{rev}.d{build_date:%Y%m%d}"
 
 [tool.ruff]
 indent-width = 4
