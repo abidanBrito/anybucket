@@ -60,6 +60,18 @@ def test_uri_convenience(client, tmp_path):
     assert dst.read_bytes() == b"\x00" * 1024
 
 
+def test_presign_get_and_put(client):
+    """Test that ``presign_get``/``presign_put`` return signed URLs for the object."""
+    get_url = client.presign_get("s3://bucket/2026/scene.tif")
+    assert get_url.startswith("http")
+    assert "2026/scene.tif" in get_url
+    assert "Expires" in get_url or "X-Amz-Expires" in get_url
+
+    put_url = client.presign_put("s3://bucket/2026/scene.tif", expires_in=60)
+    assert put_url.startswith("http")
+    assert "2026/scene.tif" in put_url
+
+
 def test_upload_missing_file_returns_failure(client, tmp_path):
     """Test that uploading a missing file returns a failure result instead of raising."""
     res = client.upload(tmp_path / "nope.txt", "bucket")
