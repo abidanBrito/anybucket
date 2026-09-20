@@ -18,7 +18,7 @@ import boto3
 from boto3.s3.transfer import TransferConfig
 from botocore.exceptions import BotoCoreError, ClientError
 
-from ..base import StorageBackend
+from ..base import DEFAULT_PRESIGN_EXPIRY, StorageBackend
 from ..config import S3Config
 from ..mime import infer_content_type
 from ..results import DownloadResult, UploadResult
@@ -178,6 +178,26 @@ class S3Backend(StorageBackend):
         for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
             keys.extend(obj["Key"] for obj in page.get("Contents", []))
         return sorted(keys)
+
+    def presign_download(
+        self, bucket: str, key: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY
+    ) -> str:
+        """Return a pre-signed URL for a time-limited ``GET`` of ``bucket/key``."""
+        return self._client.generate_presigned_url(
+            "get_object",
+            Params={"Bucket": bucket, "Key": key},
+            ExpiresIn=expires_in,
+        )
+
+    def presign_upload(
+        self, bucket: str, key: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY
+    ) -> str:
+        """Return a pre-signed URL for a time-limited ``PUT`` to ``bucket/key``."""
+        return self._client.generate_presigned_url(
+            "put_object",
+            Params={"Bucket": bucket, "Key": key},
+            ExpiresIn=expires_in,
+        )
 
     def _object_size(self, bucket: str, key: str) -> int:
         """Object size in bytes, or 0 if it can't be determined (progress only)."""

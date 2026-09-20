@@ -10,13 +10,15 @@ extra (``pip install anybucket[gcs]``) to use this backend.
 from __future__ import annotations
 
 import logging
+from datetime import timedelta
 from pathlib import Path
 
 from google.api_core.exceptions import GoogleAPIError
 from google.cloud import storage
 
-from ..base import StorageBackend
+from ..base import DEFAULT_PRESIGN_EXPIRY, StorageBackend
 from ..config import GCSConfig
+from ..exceptions import ConfigError
 from ..mime import infer_content_type
 from ..results import DownloadResult, UploadResult
 
@@ -124,6 +126,34 @@ class GCSBackend(StorageBackend):
             )
 
         return DownloadResult(success=True, bucket=bucket, key=key, local_path=local_path)
+
+    def presign_download(
+        self, bucket: str, key: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY
+    ) -> str:
+        """Return a pre-signed URL for a time-limited ``GET`` of ``bucket/key``."""
+        return self._signed_url(bucket, key, method="GET", expires_in=expires_in)
+
+    def presign_upload(
+        self, bucket: str, key: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY
+    ) -> str:
+        """Return a pre-signed URL for a time-limited ``PUT`` to ``bucket/key``."""
+        return self._signed_url(bucket, key, method="PUT", expires_in=expires_in)
+
+    def _signed_url(self, bucket: str, key: str, *, method: str, expires_in: int) -> str:
+        """Sign a V4 URL for ``bucket/key``."""
+        blob = self._client.bucket(bucket).blob(key)
+        try:
+            return blob.generate_signed_url(
+                version="v4",
+                expiration=timedelta(seconds=expires_in),
+                method=method,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise ConfigError(
+                "Cannot sign a GCS pre-signed URL. Signing needs a service-account "
+                "private key; point credentials_path (or GOOGLE_APPLICATION_CREDENTIALS) "
+                "at a service-account JSON key."
+            ) from exc
 
     def exists(self, bucket: str, key: str) -> bool:
         """Return whether an object exists."""

@@ -21,6 +21,8 @@ from .uri import parse_uri
 
 logger = logging.getLogger(__name__)
 
+DEFAULT_PRESIGN_EXPIRY = 3600
+
 
 class StorageBackend(ABC):
     """Abstract base for a single object-storage provider."""
@@ -49,6 +51,28 @@ class StorageBackend(ABC):
     @abstractmethod
     def list_keys(self, bucket: str, prefix: str = "") -> list[str]:
         """Return the keys in ``bucket`` under ``prefix`` (sorted)."""
+
+    @abstractmethod
+    def presign_download(
+        self, bucket: str, key: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY
+    ) -> str:
+        """
+        Return a pre-signed URL granting a time-limited ``GET`` of ``bucket/key``.
+
+        The holder can download the object over plain HTTP without credentials
+        until the URL expires.
+        """
+
+    @abstractmethod
+    def presign_upload(
+        self, bucket: str, key: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY
+    ) -> str:
+        """
+        Return a pre-signed URL granting a time-limited ``PUT`` to ``bucket/key``.
+
+        The holder can upload to exactly that key over plain HTTP without
+        credentials until the URL expires.
+        """
 
     def upload_many(
         self,
@@ -110,6 +134,16 @@ class StorageBackend(ABC):
         """Download addressing the source as a single ``s3://bucket/key`` URI."""
         bucket, key = parse_uri(uri)
         return self.download(bucket, key, Path(local_path))
+
+    def presign_get(self, uri: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY) -> str:
+        """Pre-signed download URL, addressing the object as a single URI."""
+        bucket, key = parse_uri(uri)
+        return self.presign_download(bucket, key, expires_in=expires_in)
+
+    def presign_put(self, uri: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY) -> str:
+        """Pre-signed upload URL, addressing the target as a single URI."""
+        bucket, key = parse_uri(uri)
+        return self.presign_upload(bucket, key, expires_in=expires_in)
 
 
 def _log_batch(op: str, results: list) -> None:
