@@ -12,7 +12,7 @@ pytest.importorskip("google.cloud.storage")
 
 from google.api_core.exceptions import NotFound  # noqa: E402
 
-from anybucket import GCSBackend, get_client  # noqa: E402
+from anybucket import ConfigError, GCSBackend, get_client  # noqa: E402
 
 
 class _FakeBlob:
@@ -37,6 +37,9 @@ class _FakeBlob:
 
     def exists(self) -> bool:
         return (self._bucket, self.name) in self._store
+
+    def generate_signed_url(self, version, expiration, method) -> str:
+        return f"https://storage.googleapis.com/{self._bucket}/{self.name}?method={method}&sig=fake"
 
 
 class _FakeBucket:
@@ -107,6 +110,27 @@ def test_uri_convenience(client, tmp_path):
     dst = tmp_path / "scene.tif"
     assert client.get("s3://bucket/2026/scene.tif", dst).success
     assert dst.read_bytes() == b"\x00" * 1024
+
+
+def test_presign_get_and_put(client):
+    """Test that ``presign_get``/``presign_put`` return signed URLs for the object."""
+    get_url = client.presign_get("s3://bucket/2026/scene.tif")
+    assert "2026/scene.tif" in get_url
+    assert "method=GET" in get_url
+
+    put_url = client.presign_put("s3://bucket/2026/scene.tif", expires_in=60)
+    assert "method=PUT" in put_url
+
+
+def test_presign_without_signing_credentials_raises(client, monkeypatch):
+    """Test that a signing failure surfaces a clear ConfigError."""
+
+    def boom(self, *args, **kwargs):
+        raise AttributeError("You need a private key to sign credentials")
+
+    monkeypatch.setattr(_FakeBlob, "generate_signed_url", boom)
+    with pytest.raises(ConfigError, match="service-account"):
+        client.presign_get("s3://bucket/2026/scene.tif")
 
 
 def test_upload_missing_file_returns_failure(client, tmp_path):
