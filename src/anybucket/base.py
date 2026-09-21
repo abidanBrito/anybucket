@@ -1,13 +1,9 @@
 """
 The backend contract every provider implements.
 
-The interface is deliberately small: a concrete backend only has to implement
-the four primitives (:meth:`upload`, :meth:`download`, :meth:`exists`,
-:meth:`list`).
-
-Batch helpers (``upload_many`` / ``download_many``) and URI convenience
-wrappers (``put`` / ``get``) are provided here in terms of those primitives,
-so they come for free on every future backend.
+Concrete backends implement the primitives; the batch helpers
+(``upload_many`` / ``download_many``) and URI wrappers (``put`` / ``get``)
+build on them here, so they come for free on every backend.
 """
 
 from __future__ import annotations
@@ -38,19 +34,48 @@ class StorageBackend(ABC):
         metadata: dict[str, str] | None = None,
         delete_after: bool = False,
     ) -> UploadResult:
-        """Upload one file. ``key`` defaults to ``{prefix}{filename}``."""
+        """
+        Upload one file.
+
+        :param local_path: file to upload.
+        :param bucket: target bucket.
+        :param key: object key; defaults to ``{prefix}{filename}``.
+        :param prefix: key prefix used when ``key`` is not given.
+        :param metadata: optional object metadata.
+        :param delete_after: if ``True``, delete ``local_path`` after a successful upload.
+        :return: the upload outcome.
+        """
 
     @abstractmethod
     def download(self, bucket: str, key: str, local_path: Path) -> DownloadResult:
-        """Download one object to ``local_path`` (parent dirs are created)."""
+        """
+        Download one object to ``local_path`` (parent dirs are created).
+
+        :param bucket: source bucket.
+        :param key: object key.
+        :param local_path: destination path.
+        :return: the download outcome.
+        """
 
     @abstractmethod
     def exists(self, bucket: str, key: str) -> bool:
-        """Return whether an object exists."""
+        """
+        Return whether an object exists.
+
+        :param bucket: bucket name.
+        :param key: object key.
+        :return: ``True`` if the object exists.
+        """
 
     @abstractmethod
     def list_keys(self, bucket: str, prefix: str = "") -> list[str]:
-        """Return the keys in ``bucket`` under ``prefix`` (sorted)."""
+        """
+        List the keys in ``bucket`` under ``prefix``.
+
+        :param bucket: bucket to list.
+        :param prefix: key prefix to filter by.
+        :return: matching keys, sorted.
+        """
 
     @abstractmethod
     def presign_download(
@@ -59,8 +84,12 @@ class StorageBackend(ABC):
         """
         Return a pre-signed URL granting a time-limited ``GET`` of ``bucket/key``.
 
-        The holder can download the object over plain HTTP without credentials
-        until the URL expires.
+        The holder can download over plain HTTP without credentials until it expires.
+
+        :param bucket: source bucket.
+        :param key: object key.
+        :param expires_in: URL lifetime in seconds.
+        :return: the pre-signed download URL.
         """
 
     @abstractmethod
@@ -71,7 +100,12 @@ class StorageBackend(ABC):
         Return a pre-signed URL granting a time-limited ``PUT`` to ``bucket/key``.
 
         The holder can upload to exactly that key over plain HTTP without
-        credentials until the URL expires.
+        credentials until it expires.
+
+        :param bucket: target bucket.
+        :param key: object key.
+        :param expires_in: URL lifetime in seconds.
+        :return: the pre-signed upload URL.
         """
 
     def upload_many(
@@ -83,10 +117,17 @@ class StorageBackend(ABC):
         metadata: dict[str, str] | None = None,
         delete_after: bool = False,
     ) -> list[UploadResult]:
-        """Upload several files, one result per file.
+        """
+        Upload several files, one result per file.
 
-        Never raises on a single failure, so the caller can inspect partial
-        success.
+        Never raises on a single failure, so the caller can inspect partial success.
+
+        :param local_paths: files to upload.
+        :param bucket: target bucket.
+        :param prefix: key prefix applied to every file.
+        :param metadata: optional metadata applied to every object.
+        :param delete_after: if ``True``, delete each file after its successful upload.
+        :return: one result per input file, in order.
         """
         results = [
             self.upload(
@@ -106,6 +147,11 @@ class StorageBackend(ABC):
         Download several objects into ``local_dir``, one result per key.
 
         The local filename is the last path segment of each key.
+
+        :param bucket: source bucket.
+        :param keys: object keys to download.
+        :param local_dir: destination directory.
+        :return: one result per key, in order.
         """
         local_dir = Path(local_dir)
         results = [self.download(bucket, key, local_dir / key.rsplit("/", 1)[-1]) for key in keys]
@@ -120,7 +166,15 @@ class StorageBackend(ABC):
         metadata: dict[str, str] | None = None,
         delete_after: bool = False,
     ) -> UploadResult:
-        """Upload addressing the target as a single ``s3://bucket/key`` URI."""
+        """
+        Upload, addressing the target as a single ``s3://bucket/key`` URI.
+
+        :param local_path: file to upload.
+        :param uri: destination URI.
+        :param metadata: optional object metadata.
+        :param delete_after: if ``True``, delete ``local_path`` after a successful upload.
+        :return: the upload outcome.
+        """
         bucket, key = parse_uri(uri)
         return self.upload(
             Path(local_path),
@@ -131,17 +185,35 @@ class StorageBackend(ABC):
         )
 
     def get(self, uri: str, local_path: Path) -> DownloadResult:
-        """Download addressing the source as a single ``s3://bucket/key`` URI."""
+        """
+        Download, addressing the source as a single ``s3://bucket/key`` URI.
+
+        :param uri: source URI.
+        :param local_path: destination path.
+        :return: the download outcome.
+        """
         bucket, key = parse_uri(uri)
         return self.download(bucket, key, Path(local_path))
 
     def presign_get(self, uri: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY) -> str:
-        """Pre-signed download URL, addressing the object as a single URI."""
+        """
+        Pre-signed download URL, addressing the object as a single URI.
+
+        :param uri: object URI.
+        :param expires_in: URL lifetime in seconds.
+        :return: the pre-signed download URL.
+        """
         bucket, key = parse_uri(uri)
         return self.presign_download(bucket, key, expires_in=expires_in)
 
     def presign_put(self, uri: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY) -> str:
-        """Pre-signed upload URL, addressing the target as a single URI."""
+        """
+        Pre-signed upload URL, addressing the target as a single URI.
+
+        :param uri: object URI.
+        :param expires_in: URL lifetime in seconds.
+        :return: the pre-signed upload URL.
+        """
         bucket, key = parse_uri(uri)
         return self.presign_upload(bucket, key, expires_in=expires_in)
 

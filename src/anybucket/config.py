@@ -1,16 +1,10 @@
 """
-Connection settings and explicit-args-with-env-fallback resolution.
+Connection settings with explicit-args-then-env-fallback resolution.
 
-The factory accepts credentials explicitly, but any value left as ``None`` is
-filled from the environment. With the default ``env_prefix="STORAGE_"`` the
-variables are:
-
-    STORAGE_ACCESS_KEY
-    STORAGE_SECRET_KEY
-    STORAGE_ENDPOINT_URL
-    STORAGE_REGION
-
-Pass a different prefix (e.g. ``"MINIO_"``) to read a provider-specific set.
+Any value left ``None`` is filled from the environment. With the default
+``env_prefix="STORAGE_"``: ``STORAGE_ACCESS_KEY``, ``STORAGE_SECRET_KEY``,
+``STORAGE_ENDPOINT_URL``, ``STORAGE_REGION``. Pass a different prefix
+(e.g. ``"MINIO_"``) to read a provider-specific set.
 """
 
 from __future__ import annotations
@@ -61,7 +55,7 @@ class S3Config:
         :param endpoint_url: provider URL, or ``None`` to read from the env.
         :param region: region name, or ``None`` to read from the env.
         :param env_prefix: prefix for the environment-variable fallback.
-        :returns: a frozen config instance.
+        :return: a frozen config instance.
         :raises ConfigError: if credentials cannot be found explicitly or in the env.
         """
         access_key = access_key or os.environ.get(f"{env_prefix}ACCESS_KEY")
@@ -129,7 +123,7 @@ class GCSConfig:
         :param credentials_path: service-account JSON path, or ``None`` to read
             from the env.
         :param env_prefix: prefix for the environment-variable fallback.
-        :returns: a frozen config instance.
+        :return: a frozen config instance.
         """
         project = project or os.environ.get(f"{env_prefix}PROJECT")
         credentials_path = credentials_path or os.environ.get(f"{env_prefix}CREDENTIALS")

@@ -1,11 +1,9 @@
 """
 Exception hierarchy for anybucket.
 
-All errors raised by the library subclass :class:`StorageError`, so callers can
-catch everything with a single ``except StorageError``.
-
-Note that upload and download *operations* do not raise on failure. Instead,
-they return result objects with a ``success`` flag (see :mod:`anybucket.results`).
+All errors subclass :class:`StorageError`. Upload/download *operations* do not
+raise on failure; they return result objects with a ``success`` flag
+(see :mod:`anybucket.results`).
 """
 
 from __future__ import annotations

@@ -22,7 +22,12 @@ _EXTRA_CONTENT_TYPES = {
 
 
 def infer_content_type(path: Path) -> str:
-    """Return a best-effort MIME type for ``path`` (octet-stream if unknown)."""
+    """
+    Return a best-effort MIME type for ``path``.
+
+    :param path: file whose content type to infer.
+    :return: the inferred MIME type, or ``application/octet-stream`` if unknown.
+    """
     mime, _ = mimetypes.guess_type(path.name)
     if mime:
         return mime

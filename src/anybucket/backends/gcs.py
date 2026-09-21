@@ -1,10 +1,8 @@
 """
 Google Cloud Storage backend.
 
-A native backend built on the official ``google-cloud-storage`` SDK.
-
-Note that ``google-cloud-storage`` is an optional dependency; install the ``gcs``
-extra (``pip install anybucket[gcs]``) to use this backend.
+Built on the official ``google-cloud-storage`` SDK, an optional dependency:
+install the ``gcs`` extra (``pip install anybucket[gcs]``) to use this backend.
 """
 
 from __future__ import annotations
@@ -44,7 +42,11 @@ class GCSBackend(StorageBackend):
             self._client = storage.Client(project=config.project)
 
     def ensure_bucket(self, bucket: str) -> None:
-        """Create ``bucket`` if it does not already exist."""
+        """
+        Create ``bucket`` if it does not already exist.
+
+        :param bucket: bucket name.
+        """
         if not self._client.bucket(bucket).exists():
             logger.info("Creating bucket %r.", bucket)
             self._client.create_bucket(bucket)
@@ -59,7 +61,17 @@ class GCSBackend(StorageBackend):
         metadata: dict[str, str] | None = None,
         delete_after: bool = False,
     ) -> UploadResult:
-        """Upload one file. ``key`` defaults to ``{prefix}{filename}``."""
+        """
+        Upload one file.
+
+        :param local_path: file to upload.
+        :param bucket: target bucket.
+        :param key: object key; defaults to ``{prefix}{filename}``.
+        :param prefix: key prefix used when ``key`` is not given.
+        :param metadata: optional object metadata.
+        :param delete_after: if ``True``, delete ``local_path`` after a successful upload.
+        :return: the upload outcome.
+        """
         local_path = Path(local_path)
         object_key = key or f"{prefix}{local_path.name}"
 
@@ -107,7 +119,14 @@ class GCSBackend(StorageBackend):
         return UploadResult(success=True, bucket=bucket, key=object_key, local_path=local_path)
 
     def download(self, bucket: str, key: str, local_path: Path) -> DownloadResult:
-        """Download one object to ``local_path`` (parent dirs are created)."""
+        """
+        Download one object to ``local_path`` (parent dirs are created).
+
+        :param bucket: source bucket.
+        :param key: object key.
+        :param local_path: destination path.
+        :return: the download outcome.
+        """
         local_path = Path(local_path)
         local_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -130,17 +149,40 @@ class GCSBackend(StorageBackend):
     def presign_download(
         self, bucket: str, key: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY
     ) -> str:
-        """Return a pre-signed URL for a time-limited ``GET`` of ``bucket/key``."""
+        """
+        Return a pre-signed URL for a time-limited ``GET`` of ``bucket/key``.
+
+        :param bucket: source bucket.
+        :param key: object key.
+        :param expires_in: URL lifetime in seconds.
+        :return: the pre-signed download URL.
+        """
         return self._signed_url(bucket, key, method="GET", expires_in=expires_in)
 
     def presign_upload(
         self, bucket: str, key: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY
     ) -> str:
-        """Return a pre-signed URL for a time-limited ``PUT`` to ``bucket/key``."""
+        """
+        Return a pre-signed URL for a time-limited ``PUT`` to ``bucket/key``.
+
+        :param bucket: target bucket.
+        :param key: object key.
+        :param expires_in: URL lifetime in seconds.
+        :return: the pre-signed upload URL.
+        """
         return self._signed_url(bucket, key, method="PUT", expires_in=expires_in)
 
     def _signed_url(self, bucket: str, key: str, *, method: str, expires_in: int) -> str:
-        """Sign a V4 URL for ``bucket/key``."""
+        """
+        Sign a V4 URL for ``bucket/key``.
+
+        :param bucket: bucket name.
+        :param key: object key.
+        :param method: HTTP method to authorize (``GET`` or ``PUT``).
+        :param expires_in: URL lifetime in seconds.
+        :return: the signed URL.
+        :raises ConfigError: if no service-account key is available to sign with.
+        """
         blob = self._client.bucket(bucket).blob(key)
         try:
             return blob.generate_signed_url(
@@ -156,10 +198,22 @@ class GCSBackend(StorageBackend):
             ) from exc
 
     def exists(self, bucket: str, key: str) -> bool:
-        """Return whether an object exists."""
+        """
+        Return whether an object exists.
+
+        :param bucket: bucket name.
+        :param key: object key.
+        :return: ``True`` if the object exists.
+        """
         return self._client.bucket(bucket).blob(key).exists()
 
     def list_keys(self, bucket: str, prefix: str = "") -> list[str]:
-        """Return the keys in ``bucket`` under ``prefix`` (sorted)."""
+        """
+        List the keys in ``bucket`` under ``prefix``.
+
+        :param bucket: bucket to list.
+        :param prefix: key prefix to filter by.
+        :return: matching keys, sorted.
+        """
         blobs = self._client.list_blobs(bucket, prefix=prefix)
         return sorted(blob.name for blob in blobs)

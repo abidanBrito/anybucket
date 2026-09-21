@@ -1,12 +1,10 @@
 """
-S3-compatible backend.
+S3-compatible object-storage backend.
 
-A single backend serves every S3-compatible provider — AWS S3, MinIO, OVH,
-Cloudflare R2, Backblaze B2, Ceph — because they differ only in ``endpoint_url``
-and credentials, not in protocol.
-
-Transfers use boto3's Transfer Manager, which streams the file in fixed-size parts
-(concurrently), so the whole file is never held in memory.
+One backend serves every S3-compatible provider (AWS S3, MinIO, OVH,
+Cloudflare R2, Backblaze B2, Ceph); they differ only in ``endpoint_url`` and
+credentials, not in protocol. Transfers stream in fixed-size parts via boto3's
+Transfer Manager, so a file is never fully held in memory.
 """
 
 from __future__ import annotations
@@ -30,7 +28,11 @@ _PART_SIZE = 8 * 1024 * 1024
 
 
 def default_transfer_config() -> TransferConfig:
-    """Return a TransferConfig tuned for memory-efficient multipart transfers."""
+    """
+    Build a ``TransferConfig`` tuned for memory-efficient multipart transfers.
+
+    :return: the transfer configuration.
+    """
     return TransferConfig(
         multipart_threshold=_PART_SIZE,
         multipart_chunksize=_PART_SIZE,
@@ -63,7 +65,11 @@ class S3Backend(StorageBackend):
         )
 
     def ensure_bucket(self, bucket: str) -> None:
-        """Create ``bucket`` if it does not already exist."""
+        """
+        Create ``bucket`` if it does not already exist.
+
+        :param bucket: bucket name.
+        """
         try:
             self._client.head_bucket(Bucket=bucket)
         except ClientError as exc:
@@ -83,7 +89,17 @@ class S3Backend(StorageBackend):
         metadata: dict[str, str] | None = None,
         delete_after: bool = False,
     ) -> UploadResult:
-        """Upload one file. ``key`` defaults to ``{prefix}{filename}``."""
+        """
+        Upload one file.
+
+        :param local_path: file to upload.
+        :param bucket: target bucket.
+        :param key: object key; defaults to ``{prefix}{filename}``.
+        :param prefix: key prefix used when ``key`` is not given.
+        :param metadata: optional object metadata.
+        :param delete_after: if ``True``, delete ``local_path`` after a successful upload.
+        :return: the upload outcome.
+        """
         local_path = Path(local_path)
         object_key = key or f"{prefix}{local_path.name}"
 
@@ -135,7 +151,14 @@ class S3Backend(StorageBackend):
         return UploadResult(success=True, bucket=bucket, key=object_key, local_path=local_path)
 
     def download(self, bucket: str, key: str, local_path: Path) -> DownloadResult:
-        """Download one object to ``local_path`` (parent dirs are created)."""
+        """
+        Download one object to ``local_path`` (parent dirs are created).
+
+        :param bucket: source bucket.
+        :param key: object key.
+        :param local_path: destination path.
+        :return: the download outcome.
+        """
         local_path = Path(local_path)
         local_path.parent.mkdir(parents=True, exist_ok=True)
 
@@ -162,7 +185,13 @@ class S3Backend(StorageBackend):
         return DownloadResult(success=True, bucket=bucket, key=key, local_path=local_path)
 
     def exists(self, bucket: str, key: str) -> bool:
-        """Return whether an object exists."""
+        """
+        Return whether an object exists.
+
+        :param bucket: bucket name.
+        :param key: object key.
+        :return: ``True`` if the object exists.
+        """
         try:
             self._client.head_object(Bucket=bucket, Key=key)
             return True
@@ -172,7 +201,13 @@ class S3Backend(StorageBackend):
             raise
 
     def list_keys(self, bucket: str, prefix: str = "") -> list[str]:
-        """Return the keys in ``bucket`` under ``prefix`` (sorted)."""
+        """
+        List the keys in ``bucket`` under ``prefix``.
+
+        :param bucket: bucket to list.
+        :param prefix: key prefix to filter by.
+        :return: matching keys, sorted.
+        """
         keys: list[str] = []
         paginator = self._client.get_paginator("list_objects_v2")
         for page in paginator.paginate(Bucket=bucket, Prefix=prefix):
@@ -182,7 +217,14 @@ class S3Backend(StorageBackend):
     def presign_download(
         self, bucket: str, key: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY
     ) -> str:
-        """Return a pre-signed URL for a time-limited ``GET`` of ``bucket/key``."""
+        """
+        Return a pre-signed URL for a time-limited ``GET`` of ``bucket/key``.
+
+        :param bucket: source bucket.
+        :param key: object key.
+        :param expires_in: URL lifetime in seconds.
+        :return: the pre-signed download URL.
+        """
         return self._client.generate_presigned_url(
             "get_object",
             Params={"Bucket": bucket, "Key": key},
@@ -192,7 +234,14 @@ class S3Backend(StorageBackend):
     def presign_upload(
         self, bucket: str, key: str, *, expires_in: int = DEFAULT_PRESIGN_EXPIRY
     ) -> str:
-        """Return a pre-signed URL for a time-limited ``PUT`` to ``bucket/key``."""
+        """
+        Return a pre-signed URL for a time-limited ``PUT`` to ``bucket/key``.
+
+        :param bucket: target bucket.
+        :param key: object key.
+        :param expires_in: URL lifetime in seconds.
+        :return: the pre-signed upload URL.
+        """
         return self._client.generate_presigned_url(
             "put_object",
             Params={"Bucket": bucket, "Key": key},
@@ -200,7 +249,13 @@ class S3Backend(StorageBackend):
         )
 
     def _object_size(self, bucket: str, key: str) -> int:
-        """Object size in bytes, or 0 if it can't be determined (progress only)."""
+        """
+        Object size in bytes (progress reporting only).
+
+        :param bucket: source bucket.
+        :param key: object key.
+        :return: size in bytes, or 0 if it can't be determined.
+        """
         try:
             head = self._client.head_object(Bucket=bucket, Key=key)
             return head.get("ContentLength", 0)
@@ -209,7 +264,12 @@ class S3Backend(StorageBackend):
 
 
 def _status_code(exc: ClientError) -> int:
-    """Return the HTTP status code from a botocore error, or 0 if unavailable."""
+    """
+    Extract the HTTP status code from a botocore error.
+
+    :param exc: the raised client error.
+    :return: the status code, or 0 if unavailable.
+    """
     return exc.response.get("ResponseMetadata", {}).get("HTTPStatusCode", 0)
 
 

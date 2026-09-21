@@ -20,7 +20,7 @@ def parse_uri(uri: str) -> tuple[str, str]:
     and the bare ``bucket/path/to/obj`` form.
 
     :param uri: the storage URI to parse.
-    :returns: a ``(bucket, key)`` tuple.
+    :return: a ``(bucket, key)`` tuple.
     :raises ConfigError: if either the bucket or the key is missing.
     """
     parsed = urlparse(uri)

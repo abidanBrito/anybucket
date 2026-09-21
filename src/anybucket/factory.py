@@ -1,8 +1,8 @@
 """
-The single entry point: ``get_client(provider, ...)``.
+The single entry point: :func:`get_client`.
 
-Most labels are S3-compatible and share :class:`S3Backend`; ``gcs`` uses the
-native :class:`GCSBackend`.
+Most provider labels are S3-compatible and share :class:`S3Backend`; ``gcs``
+uses the native :class:`GCSBackend`.
 """
 
 from __future__ import annotations
@@ -63,7 +63,7 @@ def get_client(
         (default ``"STORAGE_"``).
     :param transfer_config: optional boto3 ``TransferConfig`` passed through to
         S3-compatible backends.
-    :returns: a configured storage client.
+    :return: a configured storage client.
     :raises ProviderError: if ``provider`` is not a known label.
 
     .. rubric:: Example

@@ -1,9 +1,8 @@
 """
 Result objects returned by upload/download operations.
 
-Operations return one of these instead of raising on failure, so a caller can
-process a batch and inspect partial success without wrapping every call in a
-``try``.
+Returned instead of raising on failure, so a caller can process a batch and
+inspect partial success without wrapping every call in a ``try``.
 """
 
 from __future__ import annotations
